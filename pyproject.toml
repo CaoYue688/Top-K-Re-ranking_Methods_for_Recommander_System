@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "movielens20m-recsys"
+version = "0.1.0"
+description = "Reproducible MovieLens 20M MF and two-tower recommendation pipeline"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.0",
+  "pandas>=2.2",
+  "torch>=2.13",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

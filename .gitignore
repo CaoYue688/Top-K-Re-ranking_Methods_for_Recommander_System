@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+data/raw/*.zip
+data/raw/ml-20m/
+data/processed/
+artifacts/
+outputs/
+
