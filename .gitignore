@@ -39,7 +39,11 @@ lightning_logs/
 
 .ipynb_checkpoints/
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 .DS_Store
 Thumbs.db
 Desktop.ini

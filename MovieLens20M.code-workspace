@@ -1,0 +1,11 @@
+{
+  "folders": [
+    {
+      "name": "MovieLens 20M Recommender",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "window.title": "MovieLens 20M Recommender — ${activeEditorShort}"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python：调试当前文件",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "justMyCode": true
+    },
+    {
+      "name": "推荐系统：调试快速流水线",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "recsys20m.pipeline",
+      "args": [
+        "--root",
+        "${workspaceFolder}",
+        "--epochs",
+        "1",
+        "--steps-per-epoch",
+        "10"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "justMyCode": true
+    }
+  ]
+}
