@@ -1,25 +1,28 @@
-# MovieLens 20M：MF + Two-Tower 推荐流水线
+# MovieLens 20M：BPR-MF 推荐与重排序流水线
 
 这是一个可复现的隐式反馈推荐基线，包含：
 
 - GroupLens 官方 MovieLens 20M 下载与 ZIP 校验；
-- 迭代式 5-core 过滤（每个保留用户、物品均至少 5 次交互）；
+- 在 `rating >= 4` 正反馈上执行迭代式 5-core；
 - 每个用户内部按时间排序后约 80% / 10% / 10% 划分；
-- 验证、测试各使用“最新 1 个正样本 + 100 个全历史未交互负样本”；
+- BPR 训练混合 50% 明确负反馈（`rating <= 2`）与 50% 真正未评分物品；
+- 验证、测试各使用“最新 1 个正样本 + 100 个全历史未评分负样本”；
 - 仅用训练集构造用户 genre 分布画像；
-- BPR Matrix Factorization 与带 genre 特征的 Two-Tower DNN；
-- 用户/物品 embedding、分块物品内积近邻和两个模型各自的 Top-100；
+- BPR Matrix Factorization；
+- MF 用户/物品 embedding、分块物品内积近邻和 Top-100；
 - 用 relevance + calibration + ILD 的贪心目标重排为 Top-20。
 
 ## 已采用的口径
 
-所有评分（包括低分）均代表一次发生过的交互，因此都作为隐式正反馈。时间切分在用户内部完成；对于只有 5–9 条历史的用户，会优先保证 train、validation、test 都非空，所以这些用户的个人比例无法精确等于 80/10/10，但全量总体比例会接近目标。
+项目采用三段式反馈口径：`rating >= 4` 是正反馈，`rating <= 2` 是明确负反馈，`2.5–3.5` 是中性反馈。Train / Validation / Test 只切分正反馈；低分和中性评分仍保留，用于确保“未评分负样本”确实从未被该用户评分。明确负反馈只从对应用户的训练时间窗口抽取，避免使用未来评分。
+
+BPR 默认按 `0.5` 的概率为有低分记录的用户抽取明确负样本，其余情况抽取训练窗口内真正未评分的物品。没有明确负反馈的用户会自动退回未评分采样。对于只有 5–9 条正反馈历史的用户，会优先保证 train、validation、test 都非空，因此个人比例无法精确等于 80/10/10，但全量总体比例会接近目标。
 
 Calibration 使用用户训练历史 genre 分布与推荐列表 genre 分布之间的 Jensen–Shannon 相似度：
 
 `Calibration = 1 - JSD(P_user, Q_rec) / ln(2)`
 
-ILD 使用推荐物品 genre 多热向量两两余弦距离的均值，因此两个 baseline 可以在同一个内容语义空间中公平比较。Two-Tower 的输出已经 L2 归一化，其另行导出的物品内积近邻中，内积即余弦相似度。
+ILD 使用推荐物品 genre 多热向量两两余弦距离的均值。物品相似度分析则对 MF 物品 embedding 归一化后计算内积，因此内积等于余弦相似度。
 
 完整 `27k × 27k` float32 相似度矩阵约 3 GB。默认按块计算并保存每个物品最相似的 200 个邻居，信息足以用于检索/分析，也避免无谓的稠密矩阵落盘。
 
@@ -56,27 +59,25 @@ $env:PYTHONPATH = "$PWD\src"
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
 
-# 预处理、5-core、时间切分、评估负采样与 genre 画像
-.\.venv\Scripts\python.exe -m recsys20m.preprocess
+# 预处理、三段式反馈、5-core、时间切分、评估负采样与 genre 画像
+.\.venv\Scripts\python.exe -m recsys20m.preprocess `
+  --positive-threshold 4 --negative-threshold 2
 
-# 两个召回模型
-.\.venv\Scripts\python.exe -m recsys20m.models mf --epochs 3
-.\.venv\Scripts\python.exe -m recsys20m.models two-tower --epochs 3
+# 训练 BPR-MF；明确负样本目标占比为 50%
+.\.venv\Scripts\python.exe -m recsys20m.models `
+  --epochs 3 --explicit-negative-ratio 0.5
 
 # 101 个采样候选上的排序评估
 .\.venv\Scripts\python.exe -m recsys20m.evaluation mf --split test
-.\.venv\Scripts\python.exe -m recsys20m.evaluation two-tower --split test
 
 # 全物品精确 Top-100（屏蔽训练集已交互物品）
 .\.venv\Scripts\python.exe -m recsys20m.retrieval recommend mf
-.\.venv\Scripts\python.exe -m recsys20m.retrieval recommend two-tower
 
-# Two-Tower 物品 embedding 的分块内积 Top-200
+# MF 物品 embedding 的分块内积 Top-200
 .\.venv\Scripts\python.exe -m recsys20m.retrieval item-similarity
 
-# 两个 Top-100 分别重排为 Top-20
+# 将 MF Top-100 重排为 Top-20
 .\.venv\Scripts\python.exe -m recsys20m.rerank mf
-.\.venv\Scripts\python.exe -m recsys20m.rerank two-tower
 ```
 
 ## 主要产物
@@ -84,15 +85,16 @@ $env:PYTHONPATH = "$PWD\src"
 | 路径 | 内容 |
 |---|---|
 | `data/processed/{train,val,test}.npz` | 时间切分后的交互 |
+| `data/processed/train_explicit_negatives.npz` | 训练时间窗口中的 `rating <= 2` 明确负反馈 |
+| `data/processed/train_seen_keys.npy` | 训练窗口内所有已评分用户-物品对，用于排除伪负样本 |
 | `data/processed/eval_candidates.npz` | 每用户 1 正 + 100 负候选 |
 | `data/processed/user_genre_profiles.npy` | 用户 genre 分布 |
 | `artifacts/mf_embeddings.npz` | MF 用户/物品 embedding 与物品偏置 |
-| `artifacts/two-tower_embeddings.npz` | 双塔用户/物品 embedding |
-| `outputs/*_top100.npz` | 每模型 Top-100 候选 |
-| `outputs/two-tower_item_neighbors_top200.npz` | 物品内积近邻 |
-| `outputs/*_top20_reranked.npz` | 每模型重排 Top-20 |
-| `outputs/*_top20_quality.json` | Calibration 与 ILD 汇总 |
-| `outputs/*_top20_sample.csv` | 前 100 位用户的可读推荐样例 |
+| `outputs/mf_top100.npz` | MF Top-100 候选 |
+| `outputs/mf_item_neighbors_top200.npz` | MF 物品内积近邻 |
+| `outputs/mf_top20_reranked.npz` | MF 重排 Top-20 |
+| `outputs/mf_top20_quality.json` | Calibration 与 ILD 汇总 |
+| `outputs/mf_top20_sample.csv` | 前 100 位用户的可读推荐样例 |
 
 ## 测试
 
@@ -113,3 +115,27 @@ MovieLens 数据的使用遵循压缩包内 `README.txt` 所述条款。
 $env:PYTHONPATH = "$PWD\src"
 .\.venv\Scripts\python.exe -m recsys20m.validate --root .
 ```
+
+## Accuracy–Diversity 论文实验（最终口径）
+
+最终论文流水线与早期基线目录隔离。它使用训练分区上的迭代 5-core、三段式评分口径、
+50/50 混合 BPR 负采样、三个训练随机种子、MMR/xQuAD/Calibration、1/3/5/10% NDCG
+预算、用户级 paired bootstrap、Holm 校正、N/K 稳健性和 Tag Genome SVD64 敏感性分析。
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+
+# 完整论文实验；默认 CUDA，约需较长时间
+.\.venv\Scripts\python.exe -m recsys20m.thesis_pipeline --root .
+
+# 从最终 CSV 重新生成审计摘要和论文图
+.\.venv\Scripts\python.exe scripts\summarize_thesis_results.py
+& 'C:\Users\Aroeh\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' `
+  scripts\generate_thesis_figures.py
+```
+
+最终总表位于
+`outputs/thesis_pos4_neg2_traincore5_dataseed2026/aggregate/all_thesis_results.csv`；
+完整实验协议和审计后的结果分别见 [`RESEARCH_PROTOCOL.md`](RESEARCH_PROTOCOL.md) 与
+[`RESEARCH_RESULTS.md`](RESEARCH_RESULTS.md)。早期方案 A/Top-20 数值只保留作历史记录，
+不得用于最终论文结论。

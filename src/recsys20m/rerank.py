@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# Dieses Modul kombiniert Relevanz, Kalibrierung und Diversität für Top-20.
+# 本模块为 Top-20 组合相关性、校准度和多样性。
+# This module combines relevance, calibration, and diversity for Top-20.
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,11 +16,17 @@ from .utils import minmax_rows, save_json, timestamped_message
 
 @dataclass(frozen=True)
 class RerankWeights:
+    # Gewichtung der drei Teilziele im greedy Re-Ranking.
+    # 贪心重排中三个子目标的权重。
+    # Weights of the three sub-objectives in greedy re-ranking.
     relevance: float = 0.70
     calibration: float = 0.15
     diversity: float = 0.15
 
     def validate(self) -> None:
+        # Negative Gewichte oder eine Summe ungleich 1 würden die Skala verfälschen.
+        # 负权重或权重和不为 1 会扭曲分数尺度。
+        # Negative weights or a sum not equal to 1 would distort the scale.
         total = self.relevance + self.calibration + self.diversity
         if min(self.relevance, self.calibration, self.diversity) < 0:
             raise ValueError("Reranking weights cannot be negative.")
@@ -35,10 +44,16 @@ def greedy_rerank(
     weights: RerankWeights,
     batch_size: int = 512,
 ) -> tuple[np.ndarray, np.ndarray]:
+    # Wählt iterativ die beste noch nicht gewählte Position aus jedem Top-100-Pool.
+    # 从每个 Top-100 候选池中迭代选择最佳未选位置。
+    # Iteratively selects the best unchosen position from each Top-100 pool.
     weights.validate()
     if top_k > candidates.shape[1]:
         raise ValueError("top_k cannot exceed the candidate count.")
     normalized_relevance = minmax_rows(relevance_scores)
+    # Genre-Vektoren werden zu Verteilungen für die Kalibrierung normalisiert.
+    # 将类型向量归一化为校准所需的分布。
+    # Normalizes genre vectors into distributions for calibration.
     genre_distribution = item_genres / np.maximum(
         item_genres.sum(axis=1, keepdims=True), 1.0
     )
@@ -50,6 +65,9 @@ def greedy_rerank(
     result_objectives = np.empty((n_users, top_k), dtype=np.float32)
 
     eps = 1e-12
+    # Mehrere Benutzer werden parallel verarbeitet, die Auswahl bleibt pro Benutzer greedy.
+    # 并行处理多个用户，但每个用户的选择仍为贪心。
+    # Processes multiple users in parallel while keeping per-user selection greedy.
     for start in range(0, n_users, batch_size):
         end = min(start + batch_size, n_users)
         rows = np.arange(end - start)
@@ -66,6 +84,9 @@ def greedy_rerank(
         )
 
         for rank in range(top_k):
+            # Simuliert für jeden verbleibenden Kandidaten die neue Genre-Verteilung.
+            # 为每个剩余候选项模拟新的类型分布。
+            # Simulates the new genre distribution for each remaining candidate.
             after_mix = (genre_sum[:, None, :] + candidate_genres) / (rank + 1)
             midpoint = 0.5 * (profiles + after_mix)
             kl_profile = np.sum(
@@ -88,6 +109,9 @@ def greedy_rerank(
                 0.5 * (kl_profile + kl_recommendation) / np.log(2.0)
             )
             if rank:
+                # Mittlere Kosinusdistanz belohnt Kandidaten fern von bisherigen Picks.
+                # 平均余弦距离奖励远离已选物品的候选项。
+                # Mean cosine distance rewards candidates far from previous picks.
                 mean_similarity = np.einsum(
                     "bcd,bd->bc", candidate_vectors, selected_vector_sum
                 ) / rank
@@ -101,6 +125,9 @@ def greedy_rerank(
                 + weights.calibration * calibration
                 + weights.diversity * diversity
             )
+            # Bereits ausgewählte Kandidaten werden durch minus unendlich ausgeschlossen.
+            # 通过设为负无穷排除已选候选项。
+            # Excludes already selected candidates by assigning negative infinity.
             objective[chosen] = -np.inf
             selected_indices = np.argmax(objective, axis=1)
             selected_items = user_candidates[rows, selected_indices]
@@ -122,11 +149,17 @@ def write_sample_csv(
     processed_dir: Path,
     sample_users: int = 100,
 ) -> None:
+    # Schreibt eine menschenlesbare CSV für die ersten Benutzer zur Sichtprüfung.
+    # 为前几个用户写出可读 CSV，便于人工检查。
+    # Writes a readable CSV for the first users for visual inspection.
     users = pd.read_csv(processed_dir / "users.csv")
     items = pd.read_csv(processed_dir / "items.csv")
     sample_users = min(sample_users, len(recommendations))
     rows: list[dict[str, object]] = []
     for user_idx in range(sample_users):
+        # Interne Indizes werden wieder auf MovieLens-IDs und Filmtitel abgebildet.
+        # 将内部索引映射回 MovieLens ID 和电影标题。
+        # Maps internal indices back to MovieLens IDs and movie titles.
         for rank, item_idx in enumerate(recommendations[user_idx], start=1):
             item = items.iloc[int(item_idx)]
             rows.append(
@@ -153,6 +186,9 @@ def rerank_model(
     output_k: int = 20,
     weights: RerankWeights = RerankWeights(),
 ) -> dict[str, float]:
+    # Lädt einen Top-100-Kandidatenpool und erzeugt daraus die finale Top-20-Liste.
+    # 加载 Top-100 候选池并生成最终 Top-20 列表。
+    # Loads a Top-100 candidate pool and creates the final Top-20 list.
     with np.load(output_dir / f"{model}_top{candidate_k}.npz") as data:
         candidates, scores = data["items"], data["scores"]
     profiles = np.load(processed_dir / "user_genre_profiles.npy")
@@ -167,6 +203,9 @@ def rerank_model(
         weights,
     )
     output_dir.mkdir(parents=True, exist_ok=True)
+    # Vollständige Ergebnisse bleiben binär; eine kleine Stichprobe wird zusätzlich CSV.
+    # 完整结果保持二进制格式；额外导出小样本 CSV。
+    # Full results remain binary; a small sample is additionally exported as CSV.
     np.savez(
         output_dir / f"{model}_top{output_k}_reranked.npz",
         items=recommendations,
@@ -175,6 +214,9 @@ def rerank_model(
     metrics = recommendation_quality(
         recommendations, profiles, item_genres, item_genres
     )
+    # Die verwendeten Gewichte werden zusammen mit den Qualitätsmetriken dokumentiert.
+    # 使用的权重与质量指标一起记录。
+    # Documents the used weights together with quality metrics.
     metrics.update(
         {
             "relevance_weight": weights.relevance,
@@ -194,8 +236,11 @@ def rerank_model(
 
 
 def main() -> None:
+    # Macht Modell, Pfade, Listengröße und Gewichte über die Kommandozeile wählbar.
+    # 允许在命令行中选择模型、路径、列表大小和权重。
+    # Makes model, paths, list size, and weights selectable via command line.
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("model", choices=("mf", "two-tower"))
+    parser.add_argument("model", choices=("mf",))
     parser.add_argument("--processed-dir", type=Path, default=Path("data/processed"))
     parser.add_argument("--artifact-dir", type=Path, default=Path("artifacts"))
     parser.add_argument("--output-dir", type=Path, default=Path("outputs"))
@@ -221,4 +266,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Startet das Re-Ranking nur bei direktem Modulaufruf.
+    # 仅在模块被直接调用时启动重排。
+    # Starts re-ranking only when the module is invoked directly.
     main()

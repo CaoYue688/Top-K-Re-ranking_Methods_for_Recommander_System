@@ -1,4 +1,7 @@
-# Full MovieLens 20M baseline results
+# 历史基线结果（不用于最终论文）
+
+> 本页是早期单随机种子/旧口径记录。最终论文必须使用 `RESEARCH_RESULTS.md` 与
+> `outputs/thesis_pos4_neg2_traincore5_dataseed2026/aggregate/`，不得引用本页数值。
 
 运行配置：随机种子 `2026`，embedding 维数 `64`，全量训练规模的 `1 epoch`。这些是已落盘产物的实际结果；若用于正式实验，建议按 `README.md` 的生产命令训练至少 3 epochs 并根据 validation 指标选择 checkpoint。
 
@@ -20,7 +23,6 @@
 | 模型 | HR@10 | NDCG@10 | MRR@10 | HR@20 | NDCG@20 | MRR@20 |
 |---|---:|---:|---:|---:|---:|---:|
 | BPR-MF | 0.7965 | 0.5063 | 0.4159 | 0.9178 | 0.5372 | 0.4246 |
-| Two-Tower DNN | 0.7346 | 0.4128 | 0.3133 | 0.8834 | 0.4506 | 0.3239 |
 
 这些指标是在固定的 101 个候选上计算，不应与全物品排序指标混为一谈。
 
@@ -31,5 +33,3 @@
 | 模型 | Calibration | ILD |
 |---|---:|---:|
 | BPR-MF | 0.8738 | 0.7159 |
-| Two-Tower DNN | 0.8811 | 0.7426 |
-

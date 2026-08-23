@@ -1,29 +1,39 @@
 .venv/
 venv/
+env/
+ENV/
+.codex_deps/
 .env
 .env.*
 !.env.example
 
 __pycache__/
 *.py[cod]
+.hypothesis/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 .tox/
 .nox/
 
 *.egg-info/
+.eggs/
 build/
 dist/
+site/
 
 data/raw/*.zip
 data/raw/ml-20m/
 data/processed/
 artifacts/
+output/
 outputs/
+thesis/
+tmp/
 checkpoints/
 runs/
 wandb/
@@ -40,6 +50,7 @@ lightning_logs/
 .ipynb_checkpoints/
 .idea/
 .vscode/
+*.code-workspace
 .DS_Store
 Thumbs.db
 Desktop.ini
