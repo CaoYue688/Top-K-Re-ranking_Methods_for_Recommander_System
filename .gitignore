@@ -34,6 +34,18 @@ output/
 outputs/
 thesis/
 tmp/
+
+# Local thesis authoring, translation, and document-QA tooling
+scripts/audit_thesis_*.py
+scripts/audit_translation_full.py
+scripts/build_thesis_*.py
+scripts/finalize_translation_zh*.py
+scripts/generate_thesis_figures_zh.py
+scripts/insert_thesis_footnotes*.py
+scripts/make_pdf_contact_sheets.py
+scripts/review_translation_pairs.py
+scripts/translate_thesis_de_to_zh_full.py
+
 checkpoints/
 runs/
 wandb/
