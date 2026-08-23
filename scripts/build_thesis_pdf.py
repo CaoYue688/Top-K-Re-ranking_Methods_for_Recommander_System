@@ -1073,7 +1073,8 @@ def build_story(styles: dict[str, ParagraphStyle], doc: ThesisDocTemplate):
             continue
 
         style = styles["Bibliography"] if in_bibliography else styles["Body"]
-        add_flowable(make_paragraph(stripped, style))
+        paragraph = make_paragraph(stripped, style)
+        add_flowable(KeepTogether([paragraph]) if in_bibliography else paragraph)
         index += 1
 
     return story

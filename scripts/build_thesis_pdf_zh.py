@@ -21,7 +21,7 @@ FOOTNOTES_ZH = {
     "[[FN001]]": "参见 McNee/Riedl/Konstan (2006)，第 1097-1101 页。",
     "[[FN002]]": "参见 Rendle/Freudenthaler/Gantner/Schmidt-Thieme (2009)，第 452-461 页。",
     "[[FN003]]": "参见 Koren/Bell/Volinsky (2009)，第 30-37 页。",
-    "[[FN004]]": "参见 Kaminskas/Bridge (2017)，第 1-42 页。",
+    "[[FN004]]": "参见 Kaminskas/Bridge (2016)，第 1-42 页。",
     "[[FN005]]": "参见 Steck (2018)，第 154-162 页。",
     "[[FN006]]": "参见 Carbonell/Goldstein (1998)，第 335-336 页。",
     "[[FN007]]": "参见 Santos/Peng/Macdonald/Ounis (2010)，第 87-99 页。",
@@ -41,12 +41,12 @@ FOOTNOTES_ZH = {
     "[[FN021]]": "参见 Kaya/Bridge (2019b)，第 1639-1646 页。",
     "[[FN022]]": "参见 Kaya/Bridge (2019a)，第 151-159 页。",
     "[[FN023]]": "参见 Wang 等 (2023)，第 223-233 页。",
-    "[[FN024]]": "参见 Hidasi/Czapp (2023)。",
-    "[[FN025]]": "参见 Kaya/Bridge (2019a)，第 151-159 页，以及 Carraro/Bridge (2026)，第 1-40 页。",
+    "[[FN024]]": "参见 Hidasi/Czapp (2023)，第 848-855 页。",
+    "[[FN025]]": "参见 Kaya/Bridge (2019a)，第 151-159 页，以及 Carraro/Bridge (2025)，第 1-40 页。",
     "[[FN026]]": "参见 Kaya/Bridge (2019a)，第 151-159 页。",
     "[[FN027]]": "参见 Wang 等 (2023)，第 223-233 页。",
-    "[[FN028]]": "参见 Hidasi/Czapp (2023)。",
-    "[[FN029]]": "参见 Carraro/Bridge (2026)，第 1-40 页。",
+    "[[FN028]]": "参见 Hidasi/Czapp (2023)，第 848-855 页。",
+    "[[FN029]]": "参见 Carraro/Bridge (2025)，第 1-40 页。",
 }
 
 

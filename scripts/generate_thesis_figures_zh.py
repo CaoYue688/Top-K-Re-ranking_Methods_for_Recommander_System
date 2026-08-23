@@ -10,13 +10,15 @@ import generate_thesis_figures as figures
 ROOT = Path(__file__).resolve().parents[1]
 TRANSLATIONS = {
     "Experimentelle Verarbeitungskette": "实验处理流程",
-    "MovieLens 20M\nRatings + Metadaten": "MovieLens 20M\n评分与元数据",
-    "Chronologischer Split\nTrain-Kern + Val/Test": "时间顺序划分\n训练 Core + 验证/测试",
-    "BPR-MF\n3 Seeds, GPU": "BPR-MF\n3 个随机种子，GPU",
-    "Top-N-Kandidaten\nN=50/100/200": "Top-N 候选\nN=50/100/200",
-    "Re-Ranking\nMMR / xQuAD / Kalibrierung": "重排序\nMMR / xQuAD / 校准",
-    "Diversitätsräume\nGenre / Tag Genome SVD": "多样性空间\nGenre / Tag Genome SVD",
-    "Offline-Evaluation\nAccuracy · Diversity · Bias · Laufzeit": "离线评价\n准确性 · 多样性 · 偏差 · 运行时间",
+    "MovieLens 20M\nRatings": "MovieLens 20M\n评分",
+    "Chronologischer Split\nTrain-Kern\nValidierung | Test": "时间顺序划分\n训练 Core\n验证 | 测试",
+    "BPR-MF\nTraining: Train-Kern\n3 Seeds, GPU": "BPR-MF\n仅训练 Core\n3 个随机种子，GPU",
+    "Kandidatenpools\nN = 50 / 100 / 200\nfür Validierung und Test": "候选池\nN = 50 / 100 / 200\n用于验证与测试",
+    "MovieLens 20M\nMetadaten": "MovieLens 20M\n元数据",
+    "Diversitätsräume\nGenre | Tag Genome\n(SVD)": "多样性空间\nGenre | Tag Genome\n(SVD)",
+    "Validierungsselektion\nλ, N und Methode\nnur auf Validierung": "验证集选择\nλ、N 与方法\n仅使用验证集",
+    "Fixiertes Re-Ranking\nMMR | xQuAD |\nKalibrierung, K = 10": "固定重排序\nMMR | xQuAD |\n校准，K = 10",
+    "Finale Offline-Evaluation auf Testdaten\nNDCG | ILD | Subtopic Recall | Kalibrierung\nPopularitätsbias | Laufzeit": "测试集最终离线评价\nNDCG | ILD | Subtopic Recall | 校准\n流行度偏差 | 运行时间",
     "Accuracy–Diversity-Trade-off im Hauptversuch (Mittel über drei Seeds)": "主实验准确性-多样性权衡（三个种子均值）",
     "relativer Verlust NDCG@10 [%]": "NDCG@10 相对损失 [%]",
     "relative Steigerung ILD@10 [%]": "ILD@10 相对增长 [%]",
@@ -62,8 +64,8 @@ def tr(value: str) -> str:
     return result
 
 
-def canvas_zh(title: str, width: int = 2400, height: int = 1450):
-    return ORIGINAL_CANVAS(tr(title), width=width, height=height)
+def canvas_zh(title: str, width: int = 2400, height: int = 1450, title_size: int = 48):
+    return ORIGINAL_CANVAS(tr(title), width=width, height=height, title_size=title_size)
 
 
 def draw_axes_zh(d, xlim, ylim, xlabel, ylabel, **kwargs):

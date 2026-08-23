@@ -26,10 +26,15 @@ def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(str(BOLD if bold else FONT), size)
 
 
-def canvas(title: str, width: int = 2400, height: int = 1450) -> tuple[Image.Image, ImageDraw.ImageDraw]:
+def canvas(
+    title: str,
+    width: int = 2400,
+    height: int = 1450,
+    title_size: int = 48,
+) -> tuple[Image.Image, ImageDraw.ImageDraw]:
     im = Image.new("RGB", (width, height), "white")
     d = ImageDraw.Draw(im)
-    d.text((width // 2, 65), title, font=font(48, True), fill="#1F2933", anchor="ma")
+    d.text((width // 2, 65), title, font=font(title_size, True), fill="#1F2933", anchor="ma")
     return im, d
 
 
@@ -42,37 +47,76 @@ def text_center(d: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, size: in
     d.multiline_text(xy, text, font=font(size), fill=fill, anchor="mm", align="center", spacing=int(size * 0.25))
 
 
-def arrow(d: ImageDraw.ImageDraw, start: tuple[int, int], end: tuple[int, int]) -> None:
-    d.line([start, end], fill="#43505A", width=7)
-    x2, y2 = end
-    x1, y1 = start
+def poly_arrow(d: ImageDraw.ImageDraw, points: list[tuple[int, int]]) -> None:
+    d.line(points, fill="#43505A", width=7, joint="curve")
+    x1, y1 = points[-2]
+    x2, y2 = points[-1]
     angle = np.arctan2(y2 - y1, x2 - x1)
     length = 28
     for delta in (2.55, -2.55):
         p = (int(x2 + length * np.cos(angle + delta)), int(y2 + length * np.sin(angle + delta)))
-        d.line([end, p], fill="#43505A", width=7)
+        d.line([(x2, y2), p], fill="#43505A", width=7)
+
+
+def arrow(d: ImageDraw.ImageDraw, start: tuple[int, int], end: tuple[int, int]) -> None:
+    poly_arrow(d, [start, end])
+
+
+def line_label(d: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, size: int = 30) -> None:
+    label_font = font(size, True)
+    bbox = d.textbbox(xy, text, font=label_font, anchor="mm")
+    pad_x, pad_y = 14, 9
+    d.rounded_rectangle(
+        (bbox[0] - pad_x, bbox[1] - pad_y, bbox[2] + pad_x, bbox[3] + pad_y),
+        radius=10,
+        fill="white",
+        outline="#CBD5DC",
+        width=2,
+    )
+    d.text(xy, text, font=label_font, fill="#43505A", anchor="mm")
 
 
 def pipeline_figure() -> None:
-    im, d = canvas("Experimentelle Verarbeitungskette", height=1050)
+    im, d = canvas("Experimentelle Verarbeitungskette", height=1900, title_size=62)
     boxes = [
-        (80, 250, 410, 500, "MovieLens 20M\nRatings + Metadaten"),
-        (480, 250, 810, 500, "Chronologischer Split\nTrain-Kern + Val/Test"),
-        (880, 250, 1210, 500, "BPR-MF\n3 Seeds, GPU"),
-        (1280, 250, 1610, 500, "Top-N-Kandidaten\nN=50/100/200"),
-        (1680, 250, 2300, 500, "Re-Ranking\nMMR / xQuAD / Kalibrierung"),
-        (460, 680, 1040, 910, "Diversitätsräume\nGenre / Tag Genome SVD"),
-        (1250, 680, 2040, 910, "Offline-Evaluation\nAccuracy · Diversity · Bias · Laufzeit"),
+        (70, 250, 430, 480, "MovieLens 20M\nRatings", "#EAF2F8", 48),
+        (560, 250, 990, 480, "Chronologischer Split\nTrain-Kern\nValidierung | Test", "#EAF2F8", 41),
+        (1120, 250, 1510, 480, "BPR-MF\nTraining: Train-Kern\n3 Seeds, GPU", "#EEF2F4", 43),
+        (1640, 250, 2130, 480, "Kandidatenpools\nN = 50 / 100 / 200\nfür Validierung und Test", "#EEF2F4", 42),
+        (70, 700, 430, 930, "MovieLens 20M\nMetadaten", "#EAF2F8", 48),
+        (560, 700, 990, 930, "Diversitätsräume\nGenre | Tag Genome\n(SVD)", "#EAF2F8", 43),
+        (1640, 700, 2130, 930, "Validierungsselektion\nλ, N und Methode\nnur auf Validierung", "#FFF4D6", 43),
+        (1640, 1120, 2130, 1370, "Fixiertes Re-Ranking\nMMR | xQuAD |\nKalibrierung, K = 10", "#FFF4D6", 44),
+        (990, 1540, 2260, 1810, "Finale Offline-Evaluation auf Testdaten\nNDCG | ILD | Subtopic Recall | Kalibrierung\nPopularitätsbias | Laufzeit", "#E8F6EF", 43),
     ]
-    for x1, y1, x2, y2, txt in boxes:
-        d.rounded_rectangle((x1, y1, x2, y2), radius=24, fill="#EAF2F8", outline="#2C3E50", width=5)
-        text_center(d, ((x1 + x2) // 2, (y1 + y2) // 2), txt)
-    for s, e in [
-        ((410, 375), (480, 375)), ((810, 375), (880, 375)), ((1210, 375), (1280, 375)),
-        ((1610, 375), (1680, 375)), ((750, 680), (750, 500)), ((1990, 500), (1680, 680)),
-        ((1040, 795), (1250, 795)),
-    ]:
-        arrow(d, s, e)
+    for x1, y1, x2, y2, txt, fill, text_size in boxes:
+        d.rounded_rectangle((x1, y1, x2, y2), radius=24, fill=fill, outline="#2C3E50", width=5)
+        text_center(d, ((x1 + x2) // 2, (y1 + y2) // 2), txt, size=text_size)
+
+    arrow(d, (430, 365), (560, 365))
+    arrow(d, (990, 365), (1120, 365))
+    line_label(d, (1055, 310), "Train-Kern", 27)
+    arrow(d, (1510, 365), (1640, 365))
+    arrow(d, (430, 815), (560, 815))
+
+    arrow(d, (1885, 480), (1885, 700))
+    line_label(d, (2025, 590), "Validierungspool", 27)
+    poly_arrow(d, [(2130, 365), (2280, 365), (2280, 1245), (2130, 1245)])
+    line_label(d, (2200, 750), "Testpool", 27)
+
+    arrow(d, (990, 790), (1640, 790))
+    line_label(d, (1315, 745), "Merkmalsraum", 27)
+    poly_arrow(d, [(990, 865), (1370, 865), (1370, 1245), (1640, 1245)])
+    line_label(d, (1505, 1200), "Merkmalsraum", 27)
+
+    arrow(d, (1885, 930), (1885, 1120))
+    line_label(d, (1885, 1025), "fixierte Konfiguration", 27)
+    arrow(d, (1885, 1370), (1885, 1540))
+
+    poly_arrow(d, [(775, 480), (775, 550), (480, 550), (480, 1680), (990, 1680)])
+    line_label(d, (650, 1635), "Test-Truth", 27)
+    poly_arrow(d, [(775, 930), (775, 1440), (1250, 1540)])
+    line_label(d, (920, 1410), "Metriken", 27)
     save(im, "01_experiment_pipeline.png")
 
 
