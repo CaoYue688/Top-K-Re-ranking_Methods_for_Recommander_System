@@ -1,3 +1,5 @@
+[中文](RESEARCH_RESULTS.md) | [English](RESEARCH_RESULTS.en.md) | [Deutsch](RESEARCH_RESULTS.de.md)
+
 # 最终论文实验结果（审计版）
 
 对应数据标签：`thesis_pos4_neg2_traincore5_dataseed2026`。审计确认 686 行配置完整、组合键无重复，针对各自 K 的核心指标无缺失，三种方法在 λ=0 时基线完全一致。

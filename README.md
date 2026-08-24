@@ -1,141 +1,184 @@
-# MovieLens 20M：BPR-MF 推荐与重排序流水线
+[English](README.md) | [Deutsch](README.de.md) | [中文](README.zh-CN.md)
 
-这是一个可复现的隐式反馈推荐基线，包含：
+# Diversity-Oriented Re-ranking for Recommender Systems
 
-- GroupLens 官方 MovieLens 20M 下载与 ZIP 校验；
-- 在 `rating >= 4` 正反馈上执行迭代式 5-core；
-- 每个用户内部按时间排序后约 80% / 10% / 10% 划分；
-- BPR 训练混合 50% 明确负反馈（`rating <= 2`）与 50% 真正未评分物品；
-- 验证、测试各使用“最新 1 个正样本 + 100 个全历史未评分负样本”；
-- 仅用训练集构造用户 genre 分布画像；
-- BPR Matrix Factorization；
-- MF 用户/物品 embedding、分块物品内积近邻和 Top-100；
-- 用 relevance + calibration + ILD 的贪心目标重排为 Top-20。
+This repository contains the reproducible implementation used for the Master's thesis on diversity-oriented top-K re-ranking with MovieLens 20M. It compares MMR, xQuAD, and calibration under explicit accuracy-loss budgets.
 
-## 已采用的口径
+> The thesis results are produced by `recsys20m.thesis_pipeline`. The older `recsys20m.pipeline` is retained only as a legacy engineering baseline and is not the evidential basis of the thesis.
 
-项目采用三段式反馈口径：`rating >= 4` 是正反馈，`rating <= 2` 是明确负反馈，`2.5–3.5` 是中性反馈。Train / Validation / Test 只切分正反馈；低分和中性评分仍保留，用于确保“未评分负样本”确实从未被该用户评分。明确负反馈只从对应用户的训练时间窗口抽取，避免使用未来评分。
+## What is implemented
 
-BPR 默认按 `0.5` 的概率为有低分记录的用户抽取明确负样本，其余情况抽取训练窗口内真正未评分的物品。没有明确负反馈的用户会自动退回未评分采样。对于只有 5–9 条正反馈历史的用户，会优先保证 train、validation、test 都非空，因此个人比例无法精确等于 80/10/10，但全量总体比例会接近目标。
+- chronological train/validation/test splitting with a train-only iterative 5-core,
+- BPR-MF training with three fixed random seeds,
+- Tag Genome feature construction with a 64-dimensional SVD,
+- deterministic top-N candidate generation,
+- re-ranking with MMR, xQuAD, and calibration,
+- evaluation of accuracy, diversity, calibration, popularity bias, and runtime,
+- accuracy-loss budgets of 1%, 3%, 5%, and 10%,
+- robustness analyses for different candidate and recommendation-list sizes,
+- paired bootstrap confidence intervals and Holm-adjusted confirmatory tests.
 
-Calibration 使用用户训练历史 genre 分布与推荐列表 genre 分布之间的 Jensen–Shannon 相似度：
+## Final experiment configuration
 
-`Calibration = 1 - JSD(P_user, Q_rec) / ln(2)`
-
-ILD 使用推荐物品 genre 多热向量两两余弦距离的均值。物品相似度分析则对 MF 物品 embedding 归一化后计算内积，因此内积等于余弦相似度。
-
-完整 `27k × 27k` float32 相似度矩阵约 3 GB。默认按块计算并保存每个物品最相似的 200 个邻居，信息足以用于检索/分析，也避免无谓的稠密矩阵落盘。
-
-## 环境
-
-本项目的 Windows 虚拟环境已位于 `.venv`。从头安装可运行：
-
-```powershell
-python -m venv --system-site-packages .venv
-.\.venv\Scripts\python.exe -m pip install --index-url https://download.pytorch.org/whl/cpu torch
-$env:PYTHONPATH = "$PWD\src"
-```
-
-## 一次运行全部步骤
-
-生产基线（默认 3 个 epoch，每个 epoch 覆盖约一个训练集大小）：
-
-```powershell
-$env:PYTHONPATH = "$PWD\src"
-.\.venv\Scripts\python.exe -m recsys20m.pipeline --root .
-```
-
-快速验证整个流程：
-
-```powershell
-$env:PYTHONPATH = "$PWD\src"
-.\.venv\Scripts\python.exe -m recsys20m.pipeline --root . --epochs 1 --steps-per-epoch 100
-```
-
-固定随机种子默认为 `2026`。CPU 是默认设备；有 CUDA 时可以传 `--device cuda`。
-
-## 分阶段运行
-
-```powershell
-$env:PYTHONPATH = "$PWD\src"
-
-# 预处理、三段式反馈、5-core、时间切分、评估负采样与 genre 画像
-.\.venv\Scripts\python.exe -m recsys20m.preprocess `
-  --positive-threshold 4 --negative-threshold 2
-
-# 训练 BPR-MF；明确负样本目标占比为 50%
-.\.venv\Scripts\python.exe -m recsys20m.models `
-  --epochs 3 --explicit-negative-ratio 0.5
-
-# 101 个采样候选上的排序评估
-.\.venv\Scripts\python.exe -m recsys20m.evaluation mf --split test
-
-# 全物品精确 Top-100（屏蔽训练集已交互物品）
-.\.venv\Scripts\python.exe -m recsys20m.retrieval recommend mf
-
-# MF 物品 embedding 的分块内积 Top-200
-.\.venv\Scripts\python.exe -m recsys20m.retrieval item-similarity
-
-# 将 MF Top-100 重排为 Top-20
-.\.venv\Scripts\python.exe -m recsys20m.rerank mf
-```
-
-## 主要产物
-
-| 路径 | 内容 |
+| Item | Setting |
 |---|---|
-| `data/processed/{train,val,test}.npz` | 时间切分后的交互 |
-| `data/processed/train_explicit_negatives.npz` | 训练时间窗口中的 `rating <= 2` 明确负反馈 |
-| `data/processed/train_seen_keys.npy` | 训练窗口内所有已评分用户-物品对，用于排除伪负样本 |
-| `data/processed/eval_candidates.npz` | 每用户 1 正 + 100 负候选 |
-| `data/processed/user_genre_profiles.npy` | 用户 genre 分布 |
-| `artifacts/mf_embeddings.npz` | MF 用户/物品 embedding 与物品偏置 |
-| `outputs/mf_top100.npz` | MF Top-100 候选 |
-| `outputs/mf_item_neighbors_top200.npz` | MF 物品内积近邻 |
-| `outputs/mf_top20_reranked.npz` | MF 重排 Top-20 |
-| `outputs/mf_top20_quality.json` | Calibration 与 ILD 汇总 |
-| `outputs/mf_top20_sample.csv` | 前 100 位用户的可读推荐样例 |
+| Dataset | MovieLens 20M |
+| Positive feedback | rating >= 4.0 |
+| Explicit negative feedback | rating <= 2.0 |
+| User/item filtering | iterative 5-core, fitted only on training data |
+| Split | chronological train/validation/test |
+| Training seeds | 2026, 2027, 2028 |
+| BPR-MF | 10 epochs, 64 latent factors, batch size 8192 |
+| Negative sampling | 50% explicit negatives where available |
+| Feature space | MovieLens Tag Genome, SVD dimension 64 |
+| Retrieval pool | top 200 internally; primary evaluation uses N = 100 |
+| Recommendation length | primary K = 10 |
+| Re-rankers | MMR, xQuAD, calibration |
+| Lambda grid | primary step 0.05; robustness step 0.10 |
+| Accuracy-loss budgets | 1%, 3%, 5%, 10% |
+| Bootstrap | 200 primary and 100 robustness samples |
+| Robustness grid | N in {50, 100, 200}; K in {5, 10, 20} |
+| Compute target | CUDA GPU by default; CPU is supported but much slower |
 
-## 测试
+The complete preregistered-style procedure and metric definitions are documented in [RESEARCH_PROTOCOL.md](RESEARCH_PROTOCOL.md).
+
+## Requirements and setup
+
+Required:
+
+- Python 3.11 or newer,
+- the official MovieLens 20M dataset,
+- a CUDA-capable GPU for the intended runtime profile; CPU execution is possible.
+
+Windows PowerShell:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e .
+```
+
+Linux/macOS:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -e .
+```
+
+If the automatically installed PyTorch build does not match the local CUDA setup, install the appropriate PyTorch build for that system and then repeat the editable installation. `Pillow` is declared because the public figure-generation script imports it.
+
+## Data preparation
+
+Download and extract MovieLens 20M from the official GroupLens source. The repository does not redistribute the dataset.
+
+Place the extracted files here:
+
+```text
+data/raw/ml-20m/
+├── ratings.csv
+├── movies.csv
+├── genome-scores.csv
+└── genome-tags.csv
+```
+
+Expected archive checksum:
+
+```text
+SHA256 ml-20m.zip
+96F1322B342E074A2B251BB4C1E1990AB58082C228A430029A258A4E4393F51A
+```
+
+## Reproduce the thesis pipeline
+
+From the repository root on Windows:
+
+```powershell
+.\.venv\Scripts\python.exe -m recsys20m.thesis_pipeline --root .
+```
+
+For a CPU-only run:
+
+```powershell
+.\.venv\Scripts\python.exe -m recsys20m.thesis_pipeline --root . --device cpu
+```
+
+For a clean rerun that replaces cached intermediate results, add `--force`.
+
+After the experiment has finished, summarize the aggregate outputs and regenerate the figures:
+
+```powershell
+.\.venv\Scripts\python.exe scriptssummarize_thesis_results.py
+.\.venv\Scripts\python.exe scriptsgenerate_thesis_figures.py
+```
+
+On Linux/macOS, replace `.\.venv\Scripts\python.exe` with `.venv/bin/python`.
+
+## Main outputs
+
+The final pipeline writes its aggregate results below `outputs/thesis/aggregate/`. Important files include:
+
+| Output | Purpose |
+|---|---|
+| `summary_seed_level.csv` | seed-level aggregate metrics |
+| `budget_selection_seed_level.csv` | selected configurations under each accuracy budget |
+| `accuracy_comparison_seed_level.csv` | accuracy comparison with the BPR-MF baseline |
+| `robustness_summary_seed_level.csv` | robustness results across N and K |
+| `robustness_budget_selection_seed_level.csv` | robustness selections under the budgets |
+| `runtime_seed_level.csv` | measured execution times |
+| `figures/` | generated thesis figures |
+
+Generated data, checkpoints, and experiment outputs are excluded from Git because they are reproducible and can be large.
+
+## Tests
+
+Run the complete public test suite on Windows:
+
+```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-MovieLens 数据的使用遵循压缩包内 `README.txt` 所述条款。
+Linux/macOS:
 
-当前下载文件 `data/raw/ml-20m.zip` 的 SHA-256 为：
-
-`96F243C338A8665F6BCC89C53EDF6EE39162A846940DE6B7C8C48AEADA765FF3`
-
-可复跑最终一致性检查：
-
-```powershell
-$env:PYTHONPATH = "$PWD\src"
-.\.venv\Scripts\python.exe -m recsys20m.validate --root .
+```bash
+.venv/bin/python -m unittest discover -s tests -v
 ```
 
-## Accuracy–Diversity 论文实验（最终口径）
+## Research documentation
 
-最终论文流水线与早期基线目录隔离。它使用训练分区上的迭代 5-core、三段式评分口径、
-50/50 混合 BPR 负采样、三个训练随机种子、MMR/xQuAD/Calibration、1/3/5/10% NDCG
-预算、用户级 paired bootstrap、Holm 校正、N/K 稳健性和 Tag Genome SVD64 敏感性分析。
+- Experiment protocol: [English](RESEARCH_PROTOCOL.en.md) | [Deutsch](RESEARCH_PROTOCOL.de.md) | [中文](RESEARCH_PROTOCOL.md)
+- Audited final results: [English](RESEARCH_RESULTS.en.md) | [Deutsch](RESEARCH_RESULTS.de.md) | [中文](RESEARCH_RESULTS.md)
+- [RESULTS.md](RESULTS.md): legacy baseline output; it must not be confused with the final thesis results.
+
+## Repository structure
+
+```text
+src/recsys20m/                 core implementation
+scripts/                       reproducible result summarization and figure generation
+tests/                         public automated tests
+RESEARCH_PROTOCOL*.md          experiment protocol in Chinese, English, and German
+RESEARCH_RESULTS*.md           final result report in Chinese, English, and German
+pyproject.toml                 package metadata and canonical dependencies
+requirements.txt               convenience dependency list
+LICENSE                        MIT License
+```
+## Legacy baseline
+
+The following command runs the earlier engineering baseline:
 
 ```powershell
-$env:PYTHONPATH = "$PWD\src"
-
-# 完整论文实验；默认 CUDA，约需较长时间
-.\.venv\Scripts\python.exe -m recsys20m.thesis_pipeline --root .
-
-# 从最终 CSV 重新生成审计摘要和论文图
-.\.venv\Scripts\python.exe scripts\summarize_thesis_results.py
-& 'C:\Users\Aroeh\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' `
-  scripts\generate_thesis_figures.py
+.\.venv\Scripts\python.exe -m recsys20m.pipeline --root .
 ```
 
-最终总表位于
-`outputs/thesis_pos4_neg2_traincore5_dataseed2026/aggregate/all_thesis_results.csv`；
-完整实验协议和审计后的结果分别见 [`RESEARCH_PROTOCOL.md`](RESEARCH_PROTOCOL.md) 与
-[`RESEARCH_RESULTS.md`](RESEARCH_RESULTS.md)。早期方案 A/Top-20 数值只保留作历史记录，
-不得用于最终论文结论。
+That path uses a smaller configuration (including three training epochs, sampled evaluation, and top-20 output) and is kept for historical traceability and tests. Do not use `RESULTS.md` or this legacy command as the source for claims about the final thesis experiment.
+
+## Archived thesis version
+
+The immutable software version associated with the submitted thesis is published as the annotated tag and GitHub Release [`thesis-v1.0`](https://github.com/CaoYue688/Top-K-Re-ranking_Methods_for_Recommander_System/releases/tag/thesis-v1.0). The thesis appendix records the exact 40-character commit identifier. Reproducibility references should cite that commit or release instead of the mutable `main` branch.
+
+## License
+
+The source code is released under the [MIT License](LICENSE). MovieLens data remains subject to the separate GroupLens terms.
+## Data terms
+
+MovieLens data is subject to the GroupLens dataset terms. Obtain the dataset from the official source and observe its usage and citation requirements.

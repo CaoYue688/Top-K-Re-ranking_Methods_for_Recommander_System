@@ -1,3 +1,5 @@
+[中文](RESEARCH_PROTOCOL.md) | [English](RESEARCH_PROTOCOL.en.md) | [Deutsch](RESEARCH_PROTOCOL.de.md)
+
 # 最终论文实验协议
 
 本协议对应 `recsys20m.thesis_pipeline` 和数据标签
