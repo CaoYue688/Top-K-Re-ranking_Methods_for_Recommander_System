@@ -148,7 +148,7 @@ Linux/macOS:
 
 - Experiment protocol: [English](RESEARCH_PROTOCOL.en.md) | [Deutsch](RESEARCH_PROTOCOL.de.md) | [中文](RESEARCH_PROTOCOL.md)
 - Audited final results: [English](RESEARCH_RESULTS.en.md) | [Deutsch](RESEARCH_RESULTS.de.md) | [中文](RESEARCH_RESULTS.md)
-- [RESULTS.md](RESULTS.md): legacy baseline output; it must not be confused with the final thesis results.
+- Legacy baseline: [English](RESULTS.en.md) | [Deutsch](RESULTS.de.md) | [中文](RESULTS.md); it must not be confused with the final thesis results.
 
 ## Repository structure
 

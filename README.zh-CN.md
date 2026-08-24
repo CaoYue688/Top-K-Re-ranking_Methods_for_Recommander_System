@@ -148,7 +148,7 @@ Linux/macOS：
 
 - 实验协议：[中文](RESEARCH_PROTOCOL.md) | [English](RESEARCH_PROTOCOL.en.md) | [Deutsch](RESEARCH_PROTOCOL.de.md)
 - 经审计的最终结果：[中文](RESEARCH_RESULTS.md) | [English](RESEARCH_RESULTS.en.md) | [Deutsch](RESEARCH_RESULTS.de.md)
-- [RESULTS.md](RESULTS.md)：历史基线的输出，不能与最终论文结果混淆。
+- 历史基线：[中文](RESULTS.md) | [English](RESULTS.en.md) | [Deutsch](RESULTS.de.md)，不能与最终论文结果混淆。
 
 ## 仓库结构
 

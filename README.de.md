@@ -148,7 +148,7 @@ Linux/macOS:
 
 - Experimentprotokoll: [Deutsch](RESEARCH_PROTOCOL.de.md) | [English](RESEARCH_PROTOCOL.en.md) | [中文](RESEARCH_PROTOCOL.md)
 - Auditierte finale Ergebnisse: [Deutsch](RESEARCH_RESULTS.de.md) | [English](RESEARCH_RESULTS.en.md) | [中文](RESEARCH_RESULTS.md)
-- [RESULTS.md](RESULTS.md): Ausgabe des historischen Basislaufs; sie darf nicht mit den finalen Ergebnissen verwechselt werden.
+- Historischer Basislauf: [Deutsch](RESULTS.de.md) | [English](RESULTS.en.md) | [中文](RESULTS.md); er darf nicht mit den finalen Ergebnissen verwechselt werden.
 
 ## Repository-Struktur
 

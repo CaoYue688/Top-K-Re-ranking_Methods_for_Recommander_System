@@ -1,3 +1,5 @@
+[中文](RESULTS.md) | [English](RESULTS.en.md) | [Deutsch](RESULTS.de.md)
+
 # 历史基线结果（不用于最终论文）
 
 > 本页是早期单随机种子/旧口径记录。最终论文必须使用 `RESEARCH_RESULTS.md` 与
