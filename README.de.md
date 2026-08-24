@@ -159,7 +159,7 @@ tests/                         öffentliche automatisierte Tests
 RESEARCH_PROTOCOL*.md          Experimentprotokoll auf Chinesisch, Englisch und Deutsch
 RESEARCH_RESULTS*.md           finaler Ergebnisbericht auf Chinesisch, Englisch und Deutsch
 pyproject.toml                 Paketmetadaten und kanonische Abhängigkeiten
-requirements.txt               praktische direkte Abhängigkeitsliste
+requirements.txt               Installationshelfer mit Verweis auf pyproject.toml
 LICENSE                        MIT-Lizenz
 ```
 ## Historischer Basislauf

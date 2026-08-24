@@ -159,7 +159,7 @@ tests/                         public automated tests
 RESEARCH_PROTOCOL*.md          experiment protocol in Chinese, English, and German
 RESEARCH_RESULTS*.md           final result report in Chinese, English, and German
 pyproject.toml                 package metadata and canonical dependencies
-requirements.txt               convenience dependency list
+requirements.txt               convenience installer delegating to pyproject.toml
 LICENSE                        MIT License
 ```
 ## Legacy baseline

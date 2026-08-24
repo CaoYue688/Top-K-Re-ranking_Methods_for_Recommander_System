@@ -159,7 +159,7 @@ tests/                         公开自动化测试
 RESEARCH_PROTOCOL*.md          中、英、德三语实验协议
 RESEARCH_RESULTS*.md           中、英、德三语最终结果报告
 pyproject.toml                 包信息和唯一正式依赖定义
-requirements.txt               便捷的直接依赖列表
+requirements.txt               转交给 pyproject.toml 的便捷安装入口
 LICENSE                        MIT 许可证
 ```
 ## 历史基线
